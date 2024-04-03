@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LINE_H
-#define LINE_H
+#ifndef FIGURE_LINE_H
+#define FIGURE_LINE_H
 #include <figure/Figure.h>
 #include <functional>
 

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef INTERVAL_H
-#define INTERVAL_H
+#ifndef COMMON_INTERVAL_H
+#define COMMON_INTERVAL_H
 #include <common/global.h>
 
 
@@ -31,4 +31,4 @@ public:
 const static Interval empty(+infinity, -infinity);
 const static Interval universe(-infinity, +infinity);
 
-#endif
+#endif // COMMON_INTERVAL_H

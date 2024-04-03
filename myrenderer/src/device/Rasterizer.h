@@ -1,6 +1,6 @@
 #pragma once
-#ifndef RASTERIZER_H
-#define RASTERIZER_H
+#ifndef DEVICE_RASTERIZER_H
+#define DEVICE_RASTERIZER_H
 #include <common/global.h>
 #include <device/shader/Shader.h>
 #include <device/Canvas.h>
@@ -53,7 +53,6 @@ private:
         return size_t(_width) * size_t(canvas_y) + size_t(vp.x());
     }
 
-
     static bool _insideTriangle(const Point2& p, const Vec4(&v)[3]) {
         Point2 pntVec;
         Point2 vertexes[3];
@@ -85,28 +84,54 @@ private:
         Point2 fpos(pos.x(), pos.y());
         Point2 subpixels[4] = { fpos - delta1, fpos + delta1 ,fpos + delta2,fpos - delta2 };
         ColorN fragColor(0, 0, 0);
-        Vec3 bar = Interpolator::computeBarycentric2D(fpos, screenCoords);
         size_t index = _viewportCoord_to_bufferOffset(pos);
         for (int i = 0; i < 4; i++) {
             Point2 subpixel = subpixels[i]; //+ Point2(0.5,0.5);
+            //debug
+            /*
+            Vec3 bar = Interpolator::computeBarycentric2D(subpixel, screenCoords);
+            shader->processVarying(bar);
+            static int cnt = 0;
+            Point2 uv = shader->v2f.textureCoord;
+            std::cout << cnt++ << "\n";
+            std::cout << "pixel:" << subpixels[i][0] << " " << subpixels[i][1] << "\n"; 
+            std::cout<< "u = " << uv[0] << " v = " << uv[1] << "\n";
+            */
+
+            //debug
             if (_insideTriangle(subpixel, screenCoords)) {
                 // If so, use the following code to get the interpolated z value.
                 Vec3 bar = Interpolator::computeBarycentric2D(subpixel, screenCoords);
                 shader->processVarying(bar);
                 //深度测试
                 //z值以screen space为准, 不需要以view space为准
-                float sub_z_interpolated = Interpolator::screenspace_interpolate(bar, { screenCoords[0].z(), screenCoords[1].z(), screenCoords[2].z() });
+                double sub_z_interpolated = Interpolator::screenspace_interpolate(bar, { screenCoords[0].z(), screenCoords[1].z(), screenCoords[2].z() });
                 // 注意:z值与远近的关系需由projection和viewport变换共同决定,viewport变换后,z值越小越远,经过反转为depth值,越大越远, depth_buf初始值为无穷大
-                float depth = -sub_z_interpolated;
+                double depth = -sub_z_interpolated; // 越小越深 -> 越大越深
+
+
+                /*
+                static int cnt = 0;
+                std::cout << cnt++ << "\n";
+                std::cout << "pixel:" << subpixels[i][0] << " " << subpixels[i][1] << "\n";
+                std::cout << " z = " << sub_z_interpolated << "\n";*/
                 if (_zBuffer[index][i] > depth) {
+                    //debug
+                    /*
+                    static int cnt = 0;
+                    std::cout << cnt++ << "\n";
+                    std::cout << "pixel:" << subpixels[i][0] << " " << subpixels[i][1] << "\n";*/
+                    //debug
                     _zBuffer[index][i] = depth;
                     shader->shadeFragment(fragColor);
                     _frameBuffer[index][i] = fragColor; //仅当此种情况才会设置颜色,其余情况保持buffer不变
+                    /*
+                    std::cout <<"color["<<i<<"] = " <<_frameBuffer[index][i][0] * 255.0 << " "
+                        << _frameBuffer[index][i][0] * 255.0<<" "<< _frameBuffer[index][i][0] * 255.0<<"\n";*/
                 }
             }
         }
     }
-
 
 
 public:
@@ -137,8 +162,6 @@ public:
         BoundingBox bbox = _getBoundingBox(screenCoords);
         for (int x = bbox.lft; x <= bbox.rgt; x++) {
             for (int y = bbox.btn; y <= bbox.top; y++) {
-                //rasterize(x, y, screen_coords, shader);
-
                 rasterize_with_ssaa(Point2i(x, y), screenCoords, shader);
             }
         }
@@ -152,10 +175,10 @@ public:
             for (const ColorN& c : pixel.subunits) {
                 pixelColor += c;
             }
-            pixelColor /= _ssaa_multiple;
+            pixelColor /= double(_ssaa_multiple);
             canvas->drawOnePixel(pixelColor, i);
         }
     }
 };
 
-#endif //RASTERIZER_H
+#endif // DEVICE_RASTERIZER_H

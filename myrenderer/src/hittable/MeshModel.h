@@ -1,9 +1,9 @@
 #pragma once
-#ifndef MESH_MODEL_H
-#define MESH_MODEL_H
+#ifndef HITTABLE_MESH_MODEL_H
+#define HITTABLE_MESH_MODEL_H
 #include <vector>
 #include <hittable/Triangle.h>
-#include <device/OBJ_Loader.h>
+#include <external/OBJ_Loader.h>
 
 class MeshModel {
 public:

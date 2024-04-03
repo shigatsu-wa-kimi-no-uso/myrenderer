@@ -1,6 +1,6 @@
 #pragma once
-#ifndef INTERPOLATOR_H
-#define INTERPOLATOR_H
+#ifndef DEVICE_INTERPOLATOR_H
+#define DEVICE_INTERPOLATOR_H
 #include <common/global.h>
 
 class Interpolator {
@@ -32,4 +32,4 @@ public:
 inline Vec3 Interpolator::vertex_view_coords[3];
 
 
-#endif // INTERPOLATOR_H
+#endif // DEVICE_INTERPOLATOR_H

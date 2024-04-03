@@ -1,6 +1,6 @@
 #pragma once
-#ifndef RAY_H
-#define RAY_H
+#ifndef COMMON_RAY_H
+#define COMMON_RAY_H
 #include <common/global.h>
 
 class Ray
@@ -21,4 +21,4 @@ public:
     }
 
 };
-#endif // RAY_H
+#endif // COMMON_RAY_H

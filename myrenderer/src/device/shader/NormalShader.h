@@ -1,6 +1,6 @@
 #pragma once
-#ifndef NORMAL_SHADER_H
-#define NORMAL_SHADER_H
+#ifndef DEVICE_SHADER_NORMAL_SHADER_H
+#define DEVICE_SHADER_NORMAL_SHADER_H
 #include <device/shader/Shader.h>
 
 class NormalShader : public Shader{
@@ -24,4 +24,4 @@ public:
 	}
 };
 
-#endif // NORMAL_SHADER_H
+#endif // DEVICE_SHADER_NORMAL_SHADER_H

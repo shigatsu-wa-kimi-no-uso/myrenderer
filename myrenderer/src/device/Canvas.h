@@ -1,6 +1,6 @@
 #pragma once
-#ifndef  CANVAS_H
-#define CANVAS_H
+#ifndef DEVICE_CANVAS_H
+#define DEVICE_CANVAS_H
 #include <common/global.h>
 #include <common/Interval.h>
 #include <common/Color.h>
@@ -89,17 +89,20 @@ public:
         cout << "P3\n" << _width << ' ' << _height << "\n255\n";
         for (int i = 0; i < _width * _height; i++) {
             const ColorN& pixel_color = _frameBuffer[i];
-            auto r = pixel_color.x();
-            auto g = pixel_color.y();
-            auto b = pixel_color.z();
+
             //颜色若有多个sample需要在之前平均！此处不负责平均
 
             // Apply the linear to gamma transform.
             //gamma矫正
-            ColorN corrected = linear_to_gamma(pixel_color);
-            Color255 outputColor = normal_to_RGB255(corrected);
-
+          //  ColorN corrected = linear_to_gamma(pixel_color);
+            Color255 outputColor = normal_to_RGB255(pixel_color);
+            /*
+            if (outputColor != Color255(0, 0, 0)) {
+                std::cout << "(" << i/_width << "," << i%_width << ")" << "\n";
+                std::cout << outputColor[0] << " " << outputColor[1] << " " << outputColor[2] << "\n";
+            }*/
             // Write the translated [0,255] value of each color component.
+            
             out << outputColor.x() << ' '
                 << outputColor.y() << ' '
                 << outputColor.z() << '\n';
@@ -107,4 +110,4 @@ public:
     }
 };
 
-#endif // CANVAS_H
+#endif // DEVICE_CANVAS_H

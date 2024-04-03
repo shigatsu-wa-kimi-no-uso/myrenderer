@@ -1,6 +1,6 @@
 #pragma once
-#ifndef TRIANGLE_H
-#define TRIANGLE_H
+#ifndef HITTABLE_TRIANGLE_H
+#define HITTABLE_TRIANGLE_H
 #include <hittable/Hittable.h>
 
 

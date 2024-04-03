@@ -1,6 +1,6 @@
 #pragma once
-#ifndef GLOBAL_H
-#define GLOBAL_H
+#ifndef COMMON_GLOBAL_H
+#define COMMON_GLOBAL_H
 #include <eigen3/Eigen/Eigen>
 #include <chrono>
 #include <random>
@@ -28,4 +28,4 @@ using std::string;
 
 #include <common/Color.h>
 
-#endif // GLOBAL_H
+#endif // COMMON_GLOBAL_H

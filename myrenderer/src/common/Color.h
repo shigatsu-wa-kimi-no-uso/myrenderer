@@ -1,6 +1,6 @@
 #pragma once
-#ifndef COLOR_H
-#define COLOR_H
+#ifndef COMMON_COLOR_H
+#define COMMON_COLOR_H
 #include <common/global.h>
 #include <common/Interval.h>
 
@@ -27,4 +27,4 @@ inline Color255 normal_to_RGB255(const ColorN& normColor) {
     return Color255(256 * intensity.clamp(normColor.x()), 256 * intensity.clamp(normColor.y()), 256 * intensity.clamp(normColor.z()));
 }
 
-#endif // COLOR_H
+#endif // COMMON_COLOR_H

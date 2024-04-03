@@ -1,21 +1,30 @@
 #pragma once
-#ifndef SHADER_H
-#define SHADER_H
+#ifndef DEVICE_SHADER_SHADER_H
+#define DEVICE_SHADER_SHADER_H
 #include <common/global.h>
 #include <common/utility.h>
+#include <common/Light.h>
 #include <device/Interpolator.h>
 #include <unordered_map>
+#include <texture/Texture.h>
+#include <material/Material.h>
 
 class Shader {
 public:
+
 	struct Uniform {
 		Mat4 model;
 		Mat4 view;
 		Mat4 projection;
+		shared_ptr<Material> material;
+		std::vector<Light> lights;
+		Point3 eyePos;
+		Vec3 ambientLightIntensity;
 	}uni;
 
 	struct Attribute {
 		Vec3 vertexCoord;
+		Vec2 textureCoord;
 		Vec3 normal;
 	}attr;
 
@@ -30,18 +39,19 @@ public:
 	}
 
 	virtual void shadeFragment(ColorN& color) = 0;
-
+	struct FragmentVarying {
+		Vec3 fragCoord;
+		Vec3 normal;
+		Vec2 textureCoord;
+	}v2f;
 protected:
 	struct VertexVarying {
 		Vec3 normals[3];
 		Vec3 vertexCoords[3];
+		Vec2 textureCoords[3];
 	}a2v;
 
-	struct FragmentVarying {
-		Vec3 fragCoord;
-		Vec3 normal;
-	}v2f;
 };
 
 
-#endif // SHADER_H
+#endif // DEVICE_SHADER_SHADER_H

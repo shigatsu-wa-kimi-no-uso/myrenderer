@@ -1,7 +1,7 @@
 #pragma once
-#ifndef RAY_TRACER_H
-#define RAY_TRACER_H
+#ifndef DEVICE_RAY_TRACER_H
+#define DEVICE_RAY_TRACER_H
 
 
 
-#endif RAY_TRACER_H
+#endif // DEVICE_RAY_TRACER_H

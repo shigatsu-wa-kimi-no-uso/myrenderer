@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CAMERA_H
-#define CAMERA_H
+#ifndef DEVICE_CAMERA_H
+#define DEVICE_CAMERA_H
 #include <iostream>
 #include <hittable/Hittable.h>
 #include <common/global.h>
@@ -35,4 +35,4 @@ private:
     Vec3   _defocus_disk_v;  // Defocus disk vertical radius
 
 };
-#endif // CAMERA_H
+#endif // DEVICE_CAMERA_H

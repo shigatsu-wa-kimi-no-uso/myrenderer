@@ -1,6 +1,6 @@
 #pragma once
-#ifndef UTILITY_H
-#define UTILITY_H
+#ifndef COMMON_UTILITY_H
+#define COMMON_UTILITY_H
 #include <common/global.h>
 
 inline double deg2rad(double deg) {
@@ -104,4 +104,4 @@ inline Mat4 getModeling(const Point3& world_coord, const Vec3& scales, const Vec
 	return translate * rotation * scale;
 
 }
-#endif //UTILITY_H
+#endif // COMMON_UTILITY_H

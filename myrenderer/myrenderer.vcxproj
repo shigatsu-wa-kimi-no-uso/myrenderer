@@ -140,6 +140,9 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\common\HitRecord.h" />
+    <ClInclude Include="src\common\Image.h" />
+    <ClInclude Include="src\common\Light.h" />
     <ClInclude Include="src\common\utility.h" />
     <ClInclude Include="src\device\Camera.h" />
     <ClInclude Include="src\device\Canvas.h" />
@@ -148,20 +151,28 @@
     <ClInclude Include="src\common\Interval.h" />
     <ClInclude Include="src\common\Ray.h" />
     <ClInclude Include="src\device\Interpolator.h" />
-    <ClInclude Include="src\device\OBJ_Loader.h" />
+    <ClInclude Include="src\device\OBJLoader.h" />
     <ClInclude Include="src\device\Rasterizer.h" />
     <ClInclude Include="src\device\RayTracer.h" />
     <ClInclude Include="src\device\Renderer.h" />
-    <ClInclude Include="src\device\Scene.h" />
     <ClInclude Include="src\device\shader\NormalShader.h" />
     <ClInclude Include="src\device\shader\Shader.h" />
     <ClInclude Include="src\device\shader\TextureShader.h" />
+    <ClInclude Include="src\external\OBJ_Loader.h" />
+    <ClInclude Include="src\external\stb_image.h" />
     <ClInclude Include="src\figure\Figure.h" />
     <ClInclude Include="src\figure\Line.h" />
     <ClInclude Include="src\hittable\Hittable.h" />
+    <ClInclude Include="src\hittable\Luminary.h" />
     <ClInclude Include="src\hittable\MeshModel.h" />
     <ClInclude Include="src\hittable\Triangle.h" />
+    <ClInclude Include="src\material\BlinnPhong.h" />
+    <ClInclude Include="src\material\Lambertian.h" />
+    <ClInclude Include="src\material\Metal.h" />
     <ClInclude Include="src\material\Material.h" />
+    <ClInclude Include="src\texture\ImageTexture.h" />
+    <ClInclude Include="src\texture\SolidColorTexture.h" />
+    <ClInclude Include="src\texture\Texture.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

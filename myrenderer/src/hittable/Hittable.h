@@ -1,6 +1,6 @@
 #pragma once
-#ifndef HITTABLE_H
-#define HITTABLE_H
+#ifndef HITTABLE_HITTABLE_H
+#define HITTABLE_HITTABLE_H
 #include <memory>
 #include <vector>
 #include <common/global.h>
@@ -8,14 +8,6 @@
 #include <material/Material.h>
 
 
-struct HitRecord
-{
-    Point3 point;
-    Vec3 normal;
-    shared_ptr<Material> material;
-    double t;
-    bool front_face;
-};
 
 class Hittable
 {
@@ -66,4 +58,4 @@ public:
 };
 
 
-#endif // HITTABLE_H
+#endif // HITTABLE_HITTABLE_H

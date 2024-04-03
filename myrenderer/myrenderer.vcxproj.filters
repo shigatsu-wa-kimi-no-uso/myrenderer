@@ -53,12 +53,6 @@
     <ClInclude Include="src\device\Renderer.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\device\OBJ_Loader.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\device\Scene.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="src\device\shader\Shader.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -84,6 +78,45 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\device\shader\TextureShader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\texture\Texture.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\texture\SolidColorTexture.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\external\OBJ_Loader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\external\stb_image.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\device\OBJLoader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\texture\ImageTexture.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\Image.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\material\Metal.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\hittable\Luminary.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\material\Lambertian.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\material\BlinnPhong.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\Light.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\HitRecord.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

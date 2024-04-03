@@ -1,7 +1,7 @@
 #pragma once
-#ifndef  FIGURE_H
-#define FIGURE_H
-#include <device/canvas/Canvas.h>
+#ifndef FIGURE_FIGURE_H
+#define FIGURE_FIGURE_H
+#include <device/Canvas.h>
 
 class Figure {
 public:
