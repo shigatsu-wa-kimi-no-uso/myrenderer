@@ -23,6 +23,7 @@ public:
         rec.front_face = r.direction().dot(outward_normal) < 0;
         rec.normal = rec.front_face ? outward_normal : -outward_normal;
     }
+
 };
 
 class HittableList : public Hittable {

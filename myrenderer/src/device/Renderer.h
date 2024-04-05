@@ -12,9 +12,9 @@
 class Renderer {
 private:
 	struct Renderable {
-		shared_ptr<MeshModel> meshMod;
+		shared_ptr<MeshModel> meshMod;	//每个三角形面可能有自己的特殊材质
 		shared_ptr<Mat4> modeling;
-		shared_ptr<Material> material;	//模型与材质 shader之间是多对多关系
+		shared_ptr<Material> material;	//模型与材质 shader之间是多对多关系 模型的全局材质
 		shared_ptr<Shader> shader;
 	};
 	std::vector<Light> globalLights;
@@ -114,8 +114,6 @@ private:
 
 	void _configDevices() {
 		int height = _width / _aspectRatio;
-		_rasterizer = make_shared<Rasterizer>();
-		_canvas = make_shared<Canvas>();
 		_rasterizer->setFrameSize(_width,height);
 		_canvas->setCanvasSize(_width, height);
 	}
@@ -129,7 +127,7 @@ private:
 	TextureMap _textureMap;
 
 public:
-
+	Renderer() :_rasterizer(make_shared<Rasterizer>()),_canvas(make_shared<Canvas>()){}
 
 
 	enum RenderMethod {
@@ -151,12 +149,14 @@ public:
 
 	void setCamera(const shared_ptr<Camera>& camera) {
 		_camera = camera;
+	}
+
+	void applyConfigs() {
 		_updateViewMatrix();
 		_updateProjectionMatrix();
 		_updateViewportMatrix();
 		_configDevices();
 	}
-
 
 
 	void setSSAAMultiple(int multiple) {
@@ -196,7 +196,7 @@ public:
 		setModelShader(renderableId, shaderId);
 	}
 
-	void setModelTranslation(int meshModIdx,const shared_ptr<Mat4>& mt) {
+	void setModelTransform(int meshModIdx,const shared_ptr<Mat4>& mt) {
 		_itemMap[meshModIdx].modeling = mt;
 	}
 
@@ -236,7 +236,6 @@ public:
 			shader->uni.view = _view;
 			shader->uni.projection = _projection;
 			shader->uni.material = item.material;
-			shader->uni.eyePos = _camera->lookfrom;
 			shader->uni.lights = globalLights;
 			shader->uni.ambientLightIntensity = { 10, 10, 10 };
 			int triCnt = item.meshMod->meshList.size();
@@ -244,6 +243,7 @@ public:
 			//std::clog << shader->uni.model << "\n\n" << shader->uni.view << "\n\n" << shader->uni.projection << "\n\n" << _viewport << "\n";
 			for (const Triangle& t : item.meshMod->meshList) {
 				triCnt--;
+				shader->attr.tangent = t.tangents[0];
 				std::clog << "\rModels remaining: " << std::setw(5)  << modelCnt<<" Current model meshes remaining: " <<std::setw(5) << triCnt << std::flush;
 				Vec4 screenCoords[3];
 				for (int i = 0; i < 3; i++) {
@@ -273,6 +273,8 @@ public:
 		std::clog << "Drawing..." << std::flush;
 		_rasterizer->drawOnCanvas(_canvas);
 	}
+
+
 
 	void render() {
 		_renderMethod(this);

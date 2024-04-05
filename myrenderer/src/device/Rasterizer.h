@@ -75,64 +75,44 @@ private:
     }
     
 
-    void rasterize_with_ssaa(const Point2i& pos,const Vec4(&screenCoords)[3],const shared_ptr<Shader>& shader) {
-        // using 2x2 super-sampling anti-aliasing
-        // 像素中点为(x,y),则一个像素中4个子像素位置分别为(x-0.25,y-0.25),....
+    void rasterize_ssaa(const Point2& pos,const Vec4(&screenCoords)[3],const shared_ptr<Shader>& shader) {
+        // using super-sampling anti-aliasing
+        // 像素中点为(x,y),如果倍率为x4,则一个像素中4个子像素位置分别为(x-0.25,y-0.25),....
         //procedure: bounding box -> rasterize -> depth testing -> fragment shader -> write buffer
         //深度测试也可以在fragment shader过程之后
-        Point2 delta1(0.25, 0.25), delta2(0.25, -0.25);
-        Point2 fpos(pos.x(), pos.y());
-        Point2 subpixels[4] = { fpos - delta1, fpos + delta1 ,fpos + delta2,fpos - delta2 };
-        ColorN fragColor(0, 0, 0);
-        size_t index = _viewportCoord_to_bufferOffset(pos);
-        for (int i = 0; i < 4; i++) {
-            Point2 subpixel = subpixels[i]; //+ Point2(0.5,0.5);
-            //debug
-            /*
-            Vec3 bar = Interpolator::computeBarycentric2D(subpixel, screenCoords);
-            shader->processVarying(bar);
-            static int cnt = 0;
-            Point2 uv = shader->v2f.textureCoord;
-            std::cout << cnt++ << "\n";
-            std::cout << "pixel:" << subpixels[i][0] << " " << subpixels[i][1] << "\n"; 
-            std::cout<< "u = " << uv[0] << " v = " << uv[1] << "\n";
-            */
-
-            //debug
-            if (_insideTriangle(subpixel, screenCoords)) {
-                // If so, use the following code to get the interpolated z value.
-                Vec3 bar = Interpolator::computeBarycentric2D(subpixel, screenCoords);
-                shader->processVarying(bar);
-                //深度测试
-                //z值以screen space为准, 不需要以view space为准
-                double sub_z_interpolated = Interpolator::screenspace_interpolate(bar, { screenCoords[0].z(), screenCoords[1].z(), screenCoords[2].z() });
-                // 注意:z值与远近的关系需由projection和viewport变换共同决定,viewport变换后,z值越小越远,经过反转为depth值,越大越远, depth_buf初始值为无穷大
-                double depth = -sub_z_interpolated; // 越小越深 -> 越大越深
-
-
-                /*
-                static int cnt = 0;
-                std::cout << cnt++ << "\n";
-                std::cout << "pixel:" << subpixels[i][0] << " " << subpixels[i][1] << "\n";
-                std::cout << " z = " << sub_z_interpolated << "\n";*/
-                if (_zBuffer[index][i] > depth) {
-                    //debug
-                    /*
-                    static int cnt = 0;
-                    std::cout << cnt++ << "\n";
-                    std::cout << "pixel:" << subpixels[i][0] << " " << subpixels[i][1] << "\n";*/
-                    //debug
-                    _zBuffer[index][i] = depth;
-                    shader->shadeFragment(fragColor);
-                    _frameBuffer[index][i] = fragColor; //仅当此种情况才会设置颜色,其余情况保持buffer不变
-                    /*
-                    std::cout <<"color["<<i<<"] = " <<_frameBuffer[index][i][0] * 255.0 << " "
-                        << _frameBuffer[index][i][0] * 255.0<<" "<< _frameBuffer[index][i][0] * 255.0<<"\n";*/
-                }
+        int samples_per_line = sqrt(_ssaa_multiple);
+        Vec2 delta(1.0 / samples_per_line, 1.0 / samples_per_line);
+        Point2 subpixel_upperleft = pos - Vec2(0.5, 0.5) + delta / 2.0; //SSAA采样左上角第一个子像素位置
+        size_t bufferIdx = _viewportCoord_to_bufferOffset(Point2i(pos[0],pos[1]));
+        for (int i = 0; i < samples_per_line; i++) {
+            for (int j = 0; j < samples_per_line; j++) {
+                Point2 subpixel(subpixel_upperleft[0] + i * delta[0], subpixel_upperleft[1] + j * delta[1]); //+ Point2(0.5,0.5);
+                rasterize(subpixel, screenCoords, shader, bufferIdx, i* samples_per_line + j);
             }
         }
     }
 
+
+    void rasterize(const Point2& pos, const Vec4(&screenCoords)[3], const shared_ptr<Shader>& shader,int bufferIdx, int subunitIdx) {
+        ColorN fragColor(0, 0, 0);
+        if (_insideTriangle(pos, screenCoords)) {
+            // If so, use the following code to get the interpolated z value.
+            Vec3 bar = Interpolator::computeBarycentric2D(pos, screenCoords);
+            shader->processVarying(bar);
+            //深度测试
+            //z值以screen space为准, 不需要以view space为准
+            double sub_z_interpolated = Interpolator::screenspace_interpolate(bar, { screenCoords[0].z(), screenCoords[1].z(), screenCoords[2].z() });
+            // 注意:z值与远近的关系需由projection和viewport变换共同决定,viewport变换后,z值越小越远,经过反转为depth值,越大越远, depth_buf初始值为无穷大
+            double depth = -sub_z_interpolated; // 越小越深 -> 越大越深
+            //zbuffer一定是二维的,如果不用SSAA,则设第二维的长度为1
+            if (_zBuffer[bufferIdx][subunitIdx] > depth) {
+                _zBuffer[bufferIdx][subunitIdx] = depth;
+                shader->shadeFragment(fragColor);
+                _frameBuffer[bufferIdx][subunitIdx] = fragColor; //仅当此种情况才会设置颜色,其余情况保持buffer不变
+            }
+        }
+    }
+    
 
 public:
 
@@ -162,7 +142,7 @@ public:
         BoundingBox bbox = _getBoundingBox(screenCoords);
         for (int x = bbox.lft; x <= bbox.rgt; x++) {
             for (int y = bbox.btn; y <= bbox.top; y++) {
-                rasterize_with_ssaa(Point2i(x, y), screenCoords, shader);
+                rasterize_ssaa(Point2(x, y), screenCoords, shader);
             }
         }
     }

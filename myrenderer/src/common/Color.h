@@ -23,8 +23,8 @@ inline ColorN linear_to_gamma(ColorN linear_component)
 }
 
 inline Color255 normal_to_RGB255(const ColorN& normColor) {
-    static const Interval intensity(0.000, 0.999);
-    return Color255(256 * intensity.clamp(normColor.x()), 256 * intensity.clamp(normColor.y()), 256 * intensity.clamp(normColor.z()));
+    static const Interval intensity(0.0, 1.0);
+    return Color255(255 * intensity.clamp(normColor.x()), 255 * intensity.clamp(normColor.y()), 255 * intensity.clamp(normColor.z()));
 }
 
 #endif // COMMON_COLOR_H

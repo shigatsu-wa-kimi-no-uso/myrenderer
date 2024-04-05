@@ -119,5 +119,20 @@
     <ClInclude Include="src\common\HitRecord.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\device\shader\BumpTextureShader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\material\BlinnPhongWithBump.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\texture\CheckerTexture.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\device\shader\CheckerTextureShader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\device\shader\DepthShader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -155,6 +155,9 @@
     <ClInclude Include="src\device\Rasterizer.h" />
     <ClInclude Include="src\device\RayTracer.h" />
     <ClInclude Include="src\device\Renderer.h" />
+    <ClInclude Include="src\device\shader\BumpTextureShader.h" />
+    <ClInclude Include="src\device\shader\CheckerTextureShader.h" />
+    <ClInclude Include="src\device\shader\DepthShader.h" />
     <ClInclude Include="src\device\shader\NormalShader.h" />
     <ClInclude Include="src\device\shader\Shader.h" />
     <ClInclude Include="src\device\shader\TextureShader.h" />
@@ -167,9 +170,11 @@
     <ClInclude Include="src\hittable\MeshModel.h" />
     <ClInclude Include="src\hittable\Triangle.h" />
     <ClInclude Include="src\material\BlinnPhong.h" />
+    <ClInclude Include="src\material\BlinnPhongWithBump.h" />
     <ClInclude Include="src\material\Lambertian.h" />
     <ClInclude Include="src\material\Metal.h" />
     <ClInclude Include="src\material\Material.h" />
+    <ClInclude Include="src\texture\CheckerTexture.h" />
     <ClInclude Include="src\texture\ImageTexture.h" />
     <ClInclude Include="src\texture\SolidColorTexture.h" />
     <ClInclude Include="src\texture\Texture.h" />

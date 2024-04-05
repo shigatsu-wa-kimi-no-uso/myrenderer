@@ -1,7 +1,7 @@
 #pragma once
 #ifndef MATERIAL_BLINN_PHONG_H
-#define  MATERIAL_BLINN_PHONG_H
-#include <texture/SolidColorTexture.h>
+#define MATERIAL_BLINN_PHONG_H
+#include <texture/Texture.h>
 
 class BlinnPhong : public Material {
 public:
