@@ -4,6 +4,7 @@
 #include <common/global.h>
 #include <device/shader/Shader.h>
 #include <device/Canvas.h>
+#include <common/Buffer.h>
 
 class Rasterizer {
 private:
@@ -14,25 +15,16 @@ private:
         int btn;
     };
     
-    int _ssaa_multiple;
+    int _ssaa_multiple = 0;
 
-    template<typename T>
-    using Subunits = std::vector<T>;
+    shared_ptr<FrameBuffer> _frameBuffer = make_shared<FrameBuffer>();
+    shared_ptr<ZBuffer> _zBuffer = make_shared<ZBuffer>();
 
-    template<typename T>
-    struct BufUnit {
-        Subunits<T> subunits;
-        T& operator[](size_t i) {
-            return subunits[i];
-        }
-    };
-    using FrameBuffer = std::vector<BufUnit<ColorN>>;
-    using ZBuffer = std::vector<BufUnit<double>>;
-    FrameBuffer _frameBuffer;
-    ZBuffer _zBuffer;
+    shared_ptr<FrameBuffer> _frameBufferUsing = _frameBuffer;
+    shared_ptr<ZBuffer> _zBufferUsing = _zBuffer;
 
-    int _width;
-    int _height;
+    int _width = 0;
+    int _height = 0;
 
     BoundingBox _getBoundingBox(const Vec4(&screen_coords)[3]) {
         std::array<double, 3> coordx, coordy;
@@ -46,12 +38,20 @@ private:
         return { std::max(0,lft),std::min(rgt,_width-1),std::min(top,_height-1),std::max(0,btn) };
     }
 
-    size_t _viewportCoord_to_bufferOffset(const Point2i vp) {
+    size_t _viewportCoord_to_bufferOffset(const Point2i& vp) {
         //视口坐标 to buffer偏移,buffer按照图像坐标系,先计算canvas坐标(y从上到下递减),故需翻转y
         //假设视口高度20像素,则坐标范围[0,19],翻转后19->0 0->19,即canvas_y = 20-1-vp_y
         int canvas_y = (_height - 1 - vp.y());
         return size_t(_width) * size_t(canvas_y) + size_t(vp.x());
     }
+
+    size_t _viewportCoord_to_bufferOffset(const int vx,const int vy) {
+        //视口坐标 to buffer偏移,buffer按照图像坐标系,先计算canvas坐标(y从上到下递减),故需翻转y
+        //假设视口高度20像素,则坐标范围[0,19],翻转后19->0 0->19,即canvas_y = 20-1-vp_y
+        int canvas_y = (_height - 1 - vy);
+        return size_t(_width) * size_t(canvas_y) + size_t(vx);
+    }
+
 
     static bool _insideTriangle(const Point2& p, const Vec4(&v)[3]) {
         Point2 pntVec;
@@ -75,29 +75,32 @@ private:
     }
     
 
-    void rasterize_ssaa(const Point2& pos,const Vec4(&screenCoords)[3],const shared_ptr<Shader>& shader) {
+    void rasterize_ssaa(const Point2i& pos,const Vec4(&screenCoords)[3],const shared_ptr<Shader>& shader) {
         // using super-sampling anti-aliasing
         // 像素中点为(x,y),如果倍率为x4,则一个像素中4个子像素位置分别为(x-0.25,y-0.25),....
         //procedure: bounding box -> rasterize -> depth testing -> fragment shader -> write buffer
         //深度测试也可以在fragment shader过程之后
         int samples_per_line = sqrt(_ssaa_multiple);
         Vec2 delta(1.0 / samples_per_line, 1.0 / samples_per_line);
-        Point2 subpixel_upperleft = pos - Vec2(0.5, 0.5) + delta / 2.0; //SSAA采样左上角第一个子像素位置
-        size_t bufferIdx = _viewportCoord_to_bufferOffset(Point2i(pos[0],pos[1]));
+        Point2 fpos(pos[0], pos[1]);
+        Point2 subpixel_upperleft = fpos - Vec2(0.5, 0.5) + delta / 2.0; //SSAA采样左上角第一个子像素位置
+       // size_t bufferIdx = _viewportCoord_to_bufferOffset(Point2i(pos[0],pos[1]));
         for (int i = 0; i < samples_per_line; i++) {
             for (int j = 0; j < samples_per_line; j++) {
                 Point2 subpixel(subpixel_upperleft[0] + i * delta[0], subpixel_upperleft[1] + j * delta[1]); //+ Point2(0.5,0.5);
-                rasterize(subpixel, screenCoords, shader, bufferIdx, i* samples_per_line + j);
+                rasterize(subpixel, screenCoords, shader,  pos,i* samples_per_line + j);
             }
         }
     }
 
 
-    void rasterize(const Point2& pos, const Vec4(&screenCoords)[3], const shared_ptr<Shader>& shader,int bufferIdx, int subunitIdx) {
+    void rasterize(const Point2& subpixelPos, const Vec4(&screenCoords)[3], const shared_ptr<Shader>& shader,const Point2i& pixelPos, int subunitIdx) {
         ColorN fragColor(0, 0, 0);
-        if (_insideTriangle(pos, screenCoords)) {
+        ZBuffer& zBuffer = *_zBufferUsing;
+        FrameBuffer& frameBuffer = *_frameBufferUsing;
+        if (_insideTriangle(subpixelPos, screenCoords)) {
             // If so, use the following code to get the interpolated z value.
-            Vec3 bar = Interpolator::computeBarycentric2D(pos, screenCoords);
+            Vec3 bar = Interpolator::computeBarycentric2D(subpixelPos, screenCoords);
             shader->processVarying(bar);
             //深度测试
             //z值以screen space为准, 不需要以view space为准
@@ -105,10 +108,10 @@ private:
             // 注意:z值与远近的关系需由projection和viewport变换共同决定,viewport变换后,z值越小越远,经过反转为depth值,越大越远, depth_buf初始值为无穷大
             double depth = -sub_z_interpolated; // 越小越深 -> 越大越深
             //zbuffer一定是二维的,如果不用SSAA,则设第二维的长度为1
-            if (_zBuffer[bufferIdx][subunitIdx] > depth) {
-                _zBuffer[bufferIdx][subunitIdx] = depth;
+            if (zBuffer[pixelPos[1]][pixelPos[0]][subunitIdx] > depth) {
+                zBuffer[pixelPos[1]][pixelPos[0]][subunitIdx] = depth;
                 shader->shadeFragment(fragColor);
-                _frameBuffer[bufferIdx][subunitIdx] = fragColor; //仅当此种情况才会设置颜色,其余情况保持buffer不变
+                frameBuffer[pixelPos[1]][pixelPos[0]][subunitIdx] = fragColor; //仅当此种情况才会设置颜色,其余情况保持buffer不变
             }
         }
     }
@@ -116,25 +119,48 @@ private:
 
 public:
 
+    void useExternalBuffer(shared_ptr<FrameBuffer> frameBuffer) {
+        _frameBufferUsing = frameBuffer;
+    }
+
+    void useExternalBuffer(shared_ptr<ZBuffer> zBuffer) {
+        _zBufferUsing = zBuffer;
+    }
+
+    void useInternalBuffer() {
+        _frameBufferUsing = _frameBuffer;
+        _zBufferUsing = _zBuffer;
+    }
+
     void setFrameSize(int width, int height) {
         _width = width;
         _height = height;
-        _frameBuffer.resize(size_t(_width) * size_t(_height));
-        _zBuffer.resize(size_t(_width) * size_t(_height));
     }
 
     void setSSAAMultiple(int multiple) {
         _ssaa_multiple = multiple;
     }
 
+    int getSSAAMultiple() {
+        return _ssaa_multiple;
+    }
+
     void clearBuffer() {
         assert(_ssaa_multiple > 0);
+        assert(_width > 0 && _height > 0);
         BufUnit<ColorN> initFBuf;
         BufUnit<double> initZBuf;
         initFBuf.subunits.resize(_ssaa_multiple, ColorN(0, 0, 0));
         initZBuf.subunits.resize(_ssaa_multiple, infinity);  //注意！深度初始值应为最深,具体是无穷大还是无穷小根据对Z轴的处理方式而定,两者皆有可能！
-        std::fill(_frameBuffer.begin(), _frameBuffer.end(), initFBuf);
-        std::fill(_zBuffer.begin(), _zBuffer.end(), initZBuf);
+
+        std::vector<BufUnit<ColorN>> eachLine_FBuf;
+        std::vector<BufUnit<double>> eachLine_ZBuf;
+        eachLine_FBuf.resize( _width, initFBuf);
+        eachLine_ZBuf.resize(_width, initZBuf);
+        _frameBufferUsing->resize(_height);
+        _zBufferUsing->resize(_width);
+        std::fill(_frameBufferUsing->begin(), _frameBufferUsing->end(), eachLine_FBuf);
+        std::fill(_zBufferUsing->begin(), _zBufferUsing->end(),eachLine_ZBuf);
     }
 
     //Screen space rasterization
@@ -142,21 +168,27 @@ public:
         BoundingBox bbox = _getBoundingBox(screenCoords);
         for (int x = bbox.lft; x <= bbox.rgt; x++) {
             for (int y = bbox.btn; y <= bbox.top; y++) {
-                rasterize_ssaa(Point2(x, y), screenCoords, shader);
+                rasterize_ssaa(Point2i(x, y), screenCoords, shader);
             }
         }
     }
 
+
     void drawOnCanvas(shared_ptr<Canvas>& canvas) {
-        size_t len = _frameBuffer.size();
-        for (size_t i = 0; i < len;i++) {
-            BufUnit pixel = _frameBuffer[i];
-            ColorN pixelColor(0, 0, 0);
-            for (const ColorN& c : pixel.subunits) {
-                pixelColor += c;
+        assert(_ssaa_multiple > 0);
+        assert(_width > 0 && _height > 0);
+        const FrameBuffer& buffer = *_frameBufferUsing;
+        for (int y = 0; y < _height; y++) {
+            for (int x = 0; x < _width; x++) {
+                BufUnit pixel = buffer[y][x];
+                ColorN pixelColor(0, 0, 0);
+                for (const ColorN& c : pixel.subunits) {
+                    pixelColor += c;
+                }
+                pixelColor /= double(_ssaa_multiple);
+                size_t offset = _viewportCoord_to_bufferOffset(x, y); //图像坐标系中y轴朝下
+                canvas->drawOnePixel(pixelColor, offset );
             }
-            pixelColor /= double(_ssaa_multiple);
-            canvas->drawOnePixel(pixelColor, i);
         }
     }
 };

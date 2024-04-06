@@ -8,6 +8,7 @@
 #include <device/Rasterizer.h>
 #include <iomanip>
 #include <texture/Texture.h>
+#include <device/shader/DepthShader.h>
 
 class Renderer {
 private:
@@ -17,11 +18,18 @@ private:
 		shared_ptr<Material> material;	//模型与材质 shader之间是多对多关系 模型的全局材质
 		shared_ptr<Shader> shader;
 	};
-	std::vector<Light> globalLights;
+	std::vector<Light> _lights;
+
+	// 光源视角下的 vp*p*view 
+	// 在fragment shader中对于每个viewspace中的点均被施加了v*m变换,故对其使用 v^(-1)逆变换,再使用从光源视角渲染时所用的vp*p*view 即可得到这个点在shadowMap中的坐标
+	std::vector<Mat4> _objWorld2ShadowMap;
+	std::vector<Mat4> _objWorld2LightViewspace;
+
 	using ItemMap = std::unordered_map<int, Renderable>;
 	shared_ptr<Camera> _camera; 
 	shared_ptr<Canvas> _canvas;
 	shared_ptr<Rasterizer> _rasterizer;
+
 	ItemMap _itemMap;
 	int _lastIndex;
 	Mat4 _view;
@@ -29,10 +37,14 @@ private:
 	Mat4 _viewport;
 	Mat4 _defaultModeling = Mat4::Identity();
 	std::function<void(Renderer*)> _renderMethod;
+	std::function<void(Renderer*)> _renderShadowMethod;
 	double _aspectRatio;
-	int    _width;  // 对输出图像,即画布而言,并非视口的宽度！
-	int    _samplesPerPixel;   // 输出图像每像素采样数
-	
+	int _width;  // 对输出图像,即画布而言,并非视口的宽度！
+	int _ssaaMultiple;
+	int _samplesPerPixel;   // 输出图像每像素采样数
+	bool _withShadow;
+
+
 
 	void _updateViewMatrix() {
 		Vec3 eye_pos = _camera->lookfrom;
@@ -114,8 +126,11 @@ private:
 
 	void _configDevices() {
 		int height = _width / _aspectRatio;
+		_rasterizer->useInternalBuffer();
+		_rasterizer->setSSAAMultiple(_ssaaMultiple);
 		_rasterizer->setFrameSize(_width,height);
 		_canvas->setCanvasSize(_width, height);
+		clearBuffer();
 	}
 
 	using MaterialMap = std::unordered_map<int, shared_ptr<Material>>;
@@ -126,13 +141,16 @@ private:
 	ShaderMap _shaderMap;
 	TextureMap _textureMap;
 
+	
+
 public:
 	Renderer() :_rasterizer(make_shared<Rasterizer>()),_canvas(make_shared<Canvas>()){}
 
 
 	enum RenderMethod {
-		RASTERIZATION = 0,
-		RAY_TRACING = 1
+		RASTERIZATION = 1,
+		RAY_TRACING = 2,
+		RASTERIZATION_WITH_SHADOW = 3
 	};
 
 	void setCanvasAspectRatio(double aspectRatio) {
@@ -152,15 +170,17 @@ public:
 	}
 
 	void applyConfigs() {
-		_updateViewMatrix();
-		_updateProjectionMatrix();
-		_updateViewportMatrix();
+		//_updateViewMatrix();
+		//_updateProjectionMatrix();
+		//_updateViewportMatrix();
+		_view = getViewing(_camera->lookfrom, _camera->lookat, _camera->vup);
+		_projection = getProjection(_camera->frustum_far, _camera->frustum_near, _camera->fov, _camera->aspect_ratio);
+		_viewport = getViewport(_width, _width * _aspectRatio, _camera->frustum_far, _camera->frustum_near);
 		_configDevices();
 	}
 
-
 	void setSSAAMultiple(int multiple) {
-		_rasterizer->setSSAAMultiple(multiple);
+		_ssaaMultiple = multiple;
 	}
 
 	int addMeshModel(const shared_ptr<MeshModel>& meshMod) {
@@ -184,12 +204,13 @@ public:
 	}
 
 	void addLight(const Light& light) {
-		globalLights.push_back(light);
+		_lights.push_back(light);
 	}
 
 	shared_ptr<Texture> getTexture(int textureId) {
 		return _textureMap[textureId];
 	}
+
 
 	void bindModelProperties(int renderableId, int shaderId,int materialId) {
 		setModelMaterial(renderableId, materialId);
@@ -219,7 +240,13 @@ public:
 	void setRenderMethod(RenderMethod method) {
 		switch (method) {
 		case RASTERIZATION:
-			_renderMethod = &Renderer::rasterize_method;
+			_renderMethod = &Renderer::rasterization_method;
+			_withShadow = false;
+			break;
+		case RASTERIZATION_WITH_SHADOW:
+			_renderMethod = &Renderer::rasterization_method;
+			_renderShadowMethod = &Renderer::shadow_map_rendering_method;
+			_withShadow = true;
 			break;
 		case RAY_TRACING:
 			break;
@@ -227,17 +254,23 @@ public:
 
 	}
 
-	void rasterize_method() {
+	void rasterization_method() {
 		int modelCnt = modelCount();
+		std::clog << "Rendering objects...\n";
+	
 		for (const pair<const int, Renderable> entry : _itemMap) {
 			const Renderable& item = entry.second;
 			const shared_ptr<Shader>& shader = item.shader;
-			shader->uni.model = *item.modeling;
-			shader->uni.view = _view;
+			shader->uni.modelView =  _view * (*item.modeling);
+			shader->uni.modelViewIT = shader->uni.modelView.inverse().transpose();
 			shader->uni.projection = _projection;
 			shader->uni.material = item.material;
-			shader->uni.lights = globalLights;
+			shader->uni.lights = _lights;
 			shader->uni.ambientLightIntensity = { 10, 10, 10 };
+			shader->uni.withShadow = _withShadow;
+			shader->uni.viewInverse = _view.inverse();
+			shader->uni.objWorld2ShadowMap = _objWorld2ShadowMap;
+			shader->uni.objWorld2LightViewspace = _objWorld2LightViewspace;
 			int triCnt = item.meshMod->meshList.size();
 			modelCnt--;
 			//std::clog << shader->uni.model << "\n\n" << shader->uni.view << "\n\n" << shader->uni.projection << "\n\n" << _viewport << "\n";
@@ -259,14 +292,8 @@ public:
 					//裁剪操作暂时忽略
 					Vec4 ndcCoord = clipCoord / clipCoord.w();
 					screenCoords[i] = _viewport * ndcCoord;
-
-					//debug
-					/*
-					static int cnt = 0;
-					std::cout << cnt++ << " " << i << " " << screenCoords[i][0] << " " << screenCoords[i][1] << " " << screenCoords[i][2] << "\n";*/
 				}
 				_rasterizer->rasterize_triangle(screenCoords,shader);
-			
 			}
 		}
 		std::clog << "\n";
@@ -274,9 +301,73 @@ public:
 		_rasterizer->drawOnCanvas(_canvas);
 	}
 
+	void shadow_map_rendering_method() {
+		int i = 0;
+		for (const Light& light : _lights) {
+			const ShadowMap& map = light.shadowMap;
+			_rasterizer->useExternalBuffer(map.buffer);
+			_rasterizer->setSSAAMultiple(1); //对shadowMap不使用SSAA
+			_rasterizer->setFrameSize(map.width, map.height);
+			_rasterizer->clearBuffer();
+			std::clog << "Rendering shadow map...Light "<< i <<'\n';
+			_view = getViewing(light.position, light.direction, light.up);
+			double h = light.width / light.aspectRatio;
+			_projection = getOrthoProjection(-light.maxDistance, -0.1, -light.width / 2, light.width / 2, h / 2, -h / 2); //正交变换,无需透视除法
+			//Vec4 v(light.width / 2, light.width / 2, light.width / 2,1);
+			//v = _projection * v;
+			_viewport = getViewport(map.width, map.height, light.maxDistance,0);
+			_objWorld2ShadowMap.push_back(_viewport * _projection * _view);
+			_objWorld2LightViewspace.push_back(_view);
+			shared_ptr<Shader> shader = make_shared<DepthShader>();
+			shader->uni.maxDistance = light.maxDistance;
+			rasterizeShadowMap(shader);
+			
+			_canvas->setCanvasSize(map.width, map.height);
+			_canvas->clearBuffer();
+			_rasterizer->drawOnCanvas(_canvas);
+			std::ofstream ofile("shadow_map_light_" + std::to_string(i) + ".ppm", std::ios::out);
+			_canvas->outputPixelBuffer(ofile);
+			ofile.close();
+			i++;
+		}
+	}
+
+
+
+	void rasterizeShadowMap(const shared_ptr<Shader>& shader) {
+		int modelCnt = modelCount();
+		shader->uni.projection = _projection;
+		for (const pair<const int, Renderable> entry : _itemMap) {
+			const Renderable& item = entry.second;
+			shader->uni.modelView =  _view * (*item.modeling);
+			int triCnt = item.meshMod->meshList.size();
+			modelCnt--;
+			for (const Triangle& t : item.meshMod->meshList) {
+				triCnt--;
+				std::clog << "\rModels remaining: " << std::setw(5) << modelCnt << " Current model meshes remaining: " << std::setw(5) << triCnt << std::flush;
+				Vec4 screenCoords[3];
+				for (int i = 0; i < 3; i++) {
+					//for each vertex: Vertex Shader -> Homogeneous divide -> Viewport transform
+					//space transform: object space --MVP--> clipping space --divide by w--> NDC --viewport trans--> screen space
+					Vec4 clipCoord;
+					shader->attr.vertexCoord = toVec3(t.vertices[i]);
+					shader->shadeVertex(i, clipCoord);
+					//裁剪操作暂时忽略
+					Vec4 ndcCoord = clipCoord;  // / clipCoord.w(); //使用正交投影不需要除
+					screenCoords[i] = _viewport * ndcCoord;
+				}
+				_rasterizer->rasterize_triangle(screenCoords, shader);
+			}
+		}
+		std::clog << "\n";
+	}
 
 
 	void render() {
+		if (_withShadow) {
+			_renderShadowMethod(this);
+		}
+		applyConfigs();
 		_renderMethod(this);
 	}
 

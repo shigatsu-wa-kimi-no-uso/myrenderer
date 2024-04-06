@@ -2,7 +2,7 @@
 #ifndef COMMON_UTILITY_H
 #define COMMON_UTILITY_H
 #include <common/global.h>
-
+#include <iostream>
 inline double deg2rad(double deg) {
 	return deg * pi / 180.0;
 }
@@ -104,4 +104,119 @@ inline Mat4 getModeling(const Point3& world_coord, const Vec3& scales, const Vec
 	return translate * rotation * scale;
 
 }
+
+
+
+inline Mat4 getViewing(const Point3& eyePos,const Vec3& lookat,const Vec3& vup) {
+	Mat4 translate;
+	translate << 1, 0, 0, -eyePos[0],
+		0, 1, 0, -eyePos[1],
+		0, 0, 1, -eyePos[2],
+		0, 0, 0, 1;
+	Vec3 g = lookat;
+	Vec3 t = vup;
+	Vec3 gxt = t.cross(-g);
+	//std::clog << g.dot(t) << " " << t.dot(gxt) << " " << gxt.dot(g) << "\n";
+	Mat4 view;
+	view << gxt[0], gxt[1], gxt[2], 0,
+		t[0], t[1], t[2], 0,
+		-g[0], -g[1], -g[2], 0,
+		0, 0, 0, 1;
+	view = translate * view;
+	return view;
+}
+
+
+inline Mat4 getOrthoProjection(double f,double n,double l,double r,double t,double b) {
+	Mat4 ortho, trans, scale;
+	trans <<
+		1, 0, 0, -(r + l) / 2,   // [l,r] -> [-(r-l)/2,(r-l)/2]
+		0, 1, 0, -(t + b) / 2,  
+		0, 0, 1, -(n + f) / 2,   // [n,f]/[f,n] -> [-abs(f-n)/2,abs(f-n)/2] (n f的相对位置不变,若n<f,则平移后小的仍为n,大的仍为f)
+		0, 0, 0, 1;
+	scale <<							
+		2 / abs(r - l), 0, 0, 0,	// [-(r-l)/2,(r-l)/2] -> [-1,1]
+		0, 2 / abs(t - b), 0, 0,
+		0, 0, 2 / abs(n - f), 0,	// [-abs(f-n)/2,abs(f-n)/2] -> [-1,1]  //相对位置不变
+		0, 0, 0, 1;
+
+	ortho = scale * trans;
+	return ortho;
+}
+
+
+inline Mat4 getOrthoProjection(double f, double n, double width,double aspectRatio) {
+	double r = width / 2.0;
+	double t = r / aspectRatio;
+	double b = -t, l = -r;
+	Mat4 ortho, trans, scale;
+	trans <<
+		1, 0, 0, -(r + l) / 2,   // [l,r] -> [-(r-l)/2,(r-l)/2]
+		0, 1, 0, -(t + b) / 2,
+		0, 0, 1, -(n + f) / 2,   // [n,f]/[f,n] -> [-abs(f-n)/2,abs(f-n)/2] (n f的相对位置不变,若n<f,则平移后小的仍为n,大的仍为f)
+		0, 0, 0, 1;
+	scale <<
+		2 / abs(r - l), 0, 0, 0,	// [-(r-l)/2,(r-l)/2] -> [-1,1]
+		0, 2 / abs(t - b), 0, 0,
+		0, 0, 2 / abs(n - f), 0,	// [-abs(f-n)/2,abs(f-n)/2] -> [-1,1]  //相对位置不变
+		0, 0, 0, 1;
+	ortho = scale * trans;
+	return ortho;
+}
+
+
+inline Mat4 getProjection(double frustumFar,double frustumNear,double degFov,double aspectRatio) {
+	// 远近与[-1,1]的关系: zFar --> -1 zNear --> 1 
+	//默认从(0,0,0)看向(0,0,-1)的视野
+	Mat4 projection;
+	double f = frustumFar, n = frustumNear;			// 定义 camera 在camera坐标系下面向 -z 轴, 越远越小
+	double t = std::tan(pi * (degFov / 2.0) / 180.0) * std::abs(n);
+	double b = -t, r = t * aspectRatio, l = -r;  //基于世界坐标系的b,t,l,r  与canvas的大小即输出图像的大小不是一回事
+	// camera的aspect_ratio与输出图像的aspect ratio可能不相同
+	Mat4 ortho, persp2ortho;
+	ortho = getOrthoProjection(f, n, l, r, t, b);
+	persp2ortho <<
+		n, 0, 0, 0,
+		0, n, 0, 0,
+		0, 0, n + f, -(n * f),
+		0, 0, 1, 0;
+	// 视锥体->裁剪空间			
+	//视野->透视转正交->标准正方体(裁剪)->透视除法(外部)->NDC
+	projection = ortho * persp2ortho;
+	return projection;
+}
+
+inline Mat4 getViewport(int width,int height,int zFar,int zNear) {
+	//注意: 如果对z轴操作,则可能改变z轴值的大小符号与远近的关系
+	//此变换中, ndc_z = -1 --> screen_z=zNear, ndc_z = 1 --> screen_z=zFar,  zFar < zNear < 0
+	//输入: NDC([-1,1]^3)   near = -1, far = 1
+	double f1 = abs(zFar - zNear) / 2.0; // zLen/2.0
+	double f2 = abs(zFar + zNear) / 2.0; // 有绝对值！
+	Mat4 t, s, t2;
+	//[-1,1] -->[0,2]
+	t <<
+		1, 0, 0, 1,
+		0, 1, 0, 1,
+		0, 0, 1, 0,
+		0, 0, 0, 1;
+	s <<
+		0.5 * width, 0, 0, 0,	//[0,2]^2->[0,width]*[0,height]
+		0, 0.5 * height, 0, 0,
+		0, 0, f1, 0,			//[-1(far),1(near)] -> [-zLen/2(far),zLen/2(near)]
+		0, 0, 0, 1;
+	t2 <<						//对
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, f2,			// [-zLen/2,zLen/2] -> [min(abs(zF,zN)) (far) ,max(abs(zF,zN)) (near)] (正值,越小越深)
+		0, 0, 0, 1;
+	return t2 * s * t;
+}
+
+Vec3 getOrthoVec(const Vec3& v) {
+	Vec3 xz(v[0], 0, v[2]);  //v去除y轴在xOz平面上的投影
+	Vec3 axis(-xz[2], 0, xz[0]); //与投影垂直的向量
+	return toVec3(getRotation(axis, 90) * toVec4(v, 0));
+}
+
+
 #endif // COMMON_UTILITY_H

@@ -134,5 +134,8 @@
     <ClInclude Include="src\device\shader\DepthShader.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\common\Buffer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

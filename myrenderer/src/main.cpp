@@ -17,9 +17,17 @@ void setCamera(Camera& camera) {
 	camera.fov = 45;
 	camera.frustum_far = -50;	//基于lookat的远近值
 	camera.frustum_near = -0.1;
-	camera.lookfrom = Point3(0, 1, 5);
-	camera.lookat = Vec3(0, -0.5, -1);
-	camera.vup = Vec3(0, 1, 0);
+	camera.lookfrom = Point3(0, 0, 5);
+	//camera.lookfrom = Point3(1, 2, 5);
+	camera.lookat = (Point3(0, -1, 0)  - camera.lookfrom).normalized();
+	//camera.lookfrom = Point3(0, 1, 5);
+	//camera.lookat = Vec3(0, -0.5, -1);
+//	camera.vup = toVec3(getRotation(Vec3(1, 0, 0), 90) * toVec4(camera.lookat, 0));
+	camera.vup = getOrthoVec(camera.lookat).normalized();
+	if (camera.vup.y() < 0) {
+		camera.vup = -camera.vup;
+	}
+	//camera.vup = Vec3(0, 6, -2).normalized();//toVec3(getRotation(Vec3(1, 0, 0), 90) * toVec4(camera.lookat, 0));
 }
 
 
@@ -32,12 +40,12 @@ shared_ptr<MeshModel> getParallelogram(const Vec3& u,const Vec3& v,const Point3&
 	t1.vertices[0] = toVec4(q,1);  //q
 	t1.vertices[1] = toVec4(a, 1); //a
 	t1.vertices[2] = toVec4(b, 1); //b
-	t1.normals[0] = toVec4((b - q).cross(a - q), 0);
-	t1.normals[1] = toVec4((q - a).cross(b - a), 0);
-	t1.normals[2] = toVec4((q - b).cross(a - b), 0);
+	t1.normals[0] = toVec4((u).cross(v), 0);
+	t1.normals[1] = t1.normals[0];
+	t1.normals[2] = t1.normals[0];
 	Triangle t2 = t1;
 	t2.vertices[0] = toVec4(c,1);
-	t2.normals[2] = toVec4((c - a).cross(c - b), 0);
+	t2.normals[2] = t1.normals[0];
 	mod->meshList.push_back(t1);
 	mod->meshList.push_back(t2);
 	return mod;
@@ -65,7 +73,7 @@ void registerAssets(Renderer& renderer) {
 	textures["bump_spot"] = make_shared<ImageTexture>(bumpTexturePath);
 	textures["checker"] = make_shared<CheckerTexture>(Color255(255, 174, 201), Color255(255, 127, 39));
 
-	materials["checker"] = renderer.addMaterial(make_shared<Lambertian>(textures["checker"]));
+	materials["checker"] = renderer.addMaterial(make_shared<BlinnPhong>(ColorN(0.005, 0.005, 0.005), ColorN(0.7937, 0.7937, 0.7937), 150,textures["checker"]));
 	shared_ptr<BlinnPhong> blinnPhong = make_shared<BlinnPhong>(ColorN(0.005, 0.005, 0.005), ColorN(0.7937, 0.7937, 0.7937), 150, textures["spot"]);
 	materials["blinn_phong_spot"] = renderer.addMaterial(blinnPhong);
 	materials["blinn_phong_with_bump_spot"] = renderer.addMaterial(make_shared<BlinnPhongWithBump>(*blinnPhong, textures["bump_spot"]));
@@ -80,17 +88,18 @@ void addSpot(Renderer& renderer) {
 	int spot_id = renderer.addMeshModel(model);
 
 	renderer.bindModelProperties(spot_id, shaders["texture"], materials["blinn_phong_spot"]);
-	Mat4 modeling = getModeling(Point3(0, 0, 0), Vec3(1, 1, 1), Vec3(0, 1, 0), 140);
+	Mat4 modeling = getModeling(Point3(1, -1, -2), Vec3(1, 1, 1), Vec3(0, 1, 0), 140);
 	renderer.setModelTransform(spot_id, make_shared<Mat4>(modeling));
 }
 
 void addChecker(Renderer& renderer) {
 	shared_ptr<MeshModel> checker = getParallelogram(Vec3(5, 0, 0), Vec3(0, 0, -5), Point3(0, 0, 0));
 	int checker_id = renderer.addMeshModel(checker);
-	Mat4 modeling2 = getModeling(Point3(-3, -1, 0), Vec3(1, 1, 1), Vec3(0, 1, 0), 0);
+	Mat4 modeling2 = getModeling(Point3(-3, -2, 0), Vec3(1, 1, 1), Vec3(0, 1, 0), 0);
 	renderer.bindModelProperties(checker_id, shaders["checker"],materials["checker"]);
 	renderer.setModelTransform(checker_id, make_shared<Mat4>(modeling2));
 }
+
 
 
 int main() {
@@ -100,8 +109,26 @@ int main() {
 	setCamera(camera);
 	renderer.setCamera(make_shared<Camera>(camera));
 
-	renderer.addLight(Light{ { 20, 20, 20 }, { 500, 500, 500 } });
-	renderer.addLight(Light{ {-20, 20, 0}, {500, 500, 500} });
+	Light l1;
+	l1.position = Point3(8, 3, 4);
+	l1.intensity = Vec3(150, 150, 150);
+	l1.width = 24;
+	l1.aspectRatio = 1;
+	l1.maxDistance = 25;
+	l1.shadowMap.width = 1400;
+	l1.shadowMap.height = 1400;
+	l1.direction = (Vec3(0, -1, 0) - l1.position).normalized();
+	l1.up = getOrthoVec(l1.direction);
+	
+	Light l2 = l1;
+	l2.position = Point3(4, 3, 4);
+	l2.intensity = Vec3(250, 250, 250);
+	l2.direction = (Vec3(0, -1, 0) - l2.position).normalized();
+	l2.width = 16;
+	l2.up = getOrthoVec(l2.direction);
+	//l2.up = toVec3(getRotation(Vec3(1, 0, 0), 90) * toVec4(l2.direction, 0));
+	renderer.addLight(l1);
+	renderer.addLight(l2);
 
 	renderer.setCanvasWidth(700);
 	renderer.setCanvasAspectRatio(1);
@@ -111,10 +138,8 @@ int main() {
 	addSpot(renderer);
 
 
-	renderer.setRenderMethod(Renderer::RASTERIZATION);
+	renderer.setRenderMethod(Renderer::RASTERIZATION_WITH_SHADOW);
 	renderer.setSSAAMultiple(4);
-	renderer.applyConfigs();
-	renderer.clearBuffer();
 
 	renderer.render();
 	renderer.output(std::cout);

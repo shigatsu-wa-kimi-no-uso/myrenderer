@@ -7,13 +7,8 @@
 class TextureShader : public Shader {
 public:
 	virtual void shadeVertex(int nthVertex, Vec4& clip_coord) override {
-		Mat4 mv = uni.view * uni.model;
-        //std::clog << uni.view<<"\n";
-        //std::clog << uni.model << "\n";
-        //std::clog << uni.projection << "\n";
-		Mat4 mvIT = mv.inverse().transpose();  //变换过程中要进行法向量矫正！
-        Vec4 vertex_view_coord = mv * toVec4(attr.vertexCoord, 1);
-		a2v.normals[nthVertex] = toVec3(mvIT * toVec4(attr.normal, 0));
+        Vec4 vertex_view_coord = uni.modelView * toVec4(attr.vertexCoord, 1);
+		a2v.normals[nthVertex] = toVec3(uni.modelViewIT * toVec4(attr.normal, 0));
         a2v.textureCoords[nthVertex] = attr.textureCoord;
 		Interpolator::vertex_view_coords[nthVertex] = toVec3(vertex_view_coord);
         a2v.vertexCoords[nthVertex] = Interpolator::vertex_view_coords[nthVertex];
@@ -33,6 +28,10 @@ public:
         const shared_ptr<BlinnPhong>& material;
         const Vec3& ambientLightIntensity;
         const std::vector<Light>& lights;
+        const std::vector<Mat4>& objWorld2ShadowMap;
+        const std::vector<Mat4>& objWorld2LightViewspace;
+        const Mat4& viewInverse;
+        bool withShadow;
     };
 
     static void blinnPhong(const BlinnPhongPayload& payload,ColorN& color) {
@@ -62,8 +61,18 @@ public:
         // I = Iamb + Idiff + Ispec = Ka*Ia + Kd*(I/r^2)*max(0,cos<normal,light>) + Ks*(I/r^2)*max(0,cos<normal,half>)^p
 
         result_color += i_amb;
-        for (auto& l : payload.lights)
+        const std::vector<Light>& lights = payload.lights; 
+        const std::vector<Mat4>& transShadowMap = payload.objWorld2ShadowMap;
+        const std::vector<Mat4>& transLightViewspace = payload.objWorld2LightViewspace;
+        int lightCnt = lights.size();
+        for (int i = 0; i < lightCnt; i++)
         {
+            const Light& l = lights[i];
+            //阴影判断
+            if (payload.withShadow && !DepthShader::isLit(l, transShadowMap[i],transLightViewspace[i], payload.fragCoord,payload.viewInverse, 0.08)) {
+                continue;
+            }
+
             double r2 = (l.position - reflectPoint).squaredNorm();   // r^2
             Vec3 intensityArrived = l.intensity / r2;   // I/r^2
             Vec3 l_vec = (l.position - reflectPoint).normalized();  //入射光线单位向量反方向
@@ -78,10 +87,8 @@ public:
 
     }
 
-
     // Phong shading with texture
 	virtual void shadeFragment(ColorN& color) override {
-   
         Point3 reflectPoint = v2f.fragCoord;
         Vec3 normal = v2f.normal.normalized();
         Point2 uv = v2f.textureCoord;
@@ -91,7 +98,7 @@ public:
         //模型-材质-贴图-shader之间均为多对多关系,但只要类型转换符合预期即不会出错
         shared_ptr<BlinnPhong> material = *reinterpret_cast<shared_ptr<BlinnPhong>*>(&uni.material);
 
-        BlinnPhongPayload payload = { reflectPoint,normal,uv,material,uni.ambientLightIntensity,uni.lights };
+        BlinnPhongPayload payload = { reflectPoint,normal,uv,material,uni.ambientLightIntensity,uni.lights ,uni.objWorld2ShadowMap,uni.objWorld2LightViewspace,uni.viewInverse,uni.withShadow};
 
         blinnPhong(payload, color);
 	}

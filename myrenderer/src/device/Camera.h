@@ -17,7 +17,7 @@ public:
 
     double fov = 50;  // Vertical view angle (field of view) (degree)
     Point3 lookfrom = Point3(0, 0, -1);  // Point camera is looking from
-    Point3 lookat = Point3(0, 0, 0);   // Point camera is looking at
+    Vec3 lookat = Vec3(0, 0, 0);   // Point camera is looking at
     Vec3   vup = Vec3(0, 1, 0);     // Camera-relative "up" direction
 
     double defocus_angle = 0;  // Variation angle of rays through each pixel

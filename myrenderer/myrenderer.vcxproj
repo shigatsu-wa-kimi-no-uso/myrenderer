@@ -140,6 +140,7 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\common\Buffer.h" />
     <ClInclude Include="src\common\HitRecord.h" />
     <ClInclude Include="src\common\Image.h" />
     <ClInclude Include="src\common\Light.h" />

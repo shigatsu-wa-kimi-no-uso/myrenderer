@@ -82,11 +82,15 @@ public:
         _draw_method(*this, pixel_color, offset);
     }
 
+    virtual void drawOnePixel(const ColorN& pixel_color, int x, int y) {
+        _draw_method(*this, pixel_color, y * _width + x);
+    }
+
     virtual void outputPixelBuffer(std::ostream& out) {
         //PPM¸ñÊ½Êä³ö
         using namespace std;
-        std::cout.flush();
-        cout << "P3\n" << _width << ' ' << _height << "\n255\n";
+        out.flush();
+        out << "P3\n" << _width << ' ' << _height << "\n255\n";
         for (int i = 0; i < _width * _height; i++) {
             const ColorN& pixel_color = _frameBuffer[i];
 
