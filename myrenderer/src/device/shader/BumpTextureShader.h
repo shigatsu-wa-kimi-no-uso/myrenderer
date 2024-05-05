@@ -12,8 +12,8 @@ class BumpTextureShader : public TextureShader{
         Vec3 normal = toVec3(uni.modelViewIT * toVec4(attr.normal, 0));;
         a2v.normals[nthVertex] = normal;
         a2v.textureCoords[nthVertex] = attr.textureCoord;
-        Interpolator::vertex_view_coords[nthVertex] = toVec3(vertex_view_coord);
-        a2v.vertexCoords[nthVertex] = Interpolator::vertex_view_coords[nthVertex];
+        interpolator.vertex_view_coords[nthVertex] = toVec3(vertex_view_coord);
+        a2v.vertexCoords[nthVertex] = interpolator.vertex_view_coords[nthVertex];
         clip_coord = uni.projection * vertex_view_coord;
         Vec3 tangent = toVec3((uni.modelView*toVec4(attr.tangent,0))).normalized();    //切线不需要矫正,线性良好
         Vec3 bitangent = normal.cross(tangent).normalized();
@@ -21,9 +21,9 @@ class BumpTextureShader : public TextureShader{
     }
 
     virtual void processVarying(const Vec3& bar) override {
-        v2f.fragCoord = Interpolator::viewspace_interpolate(bar, a2v.vertexCoords);
-        v2f.normal = Interpolator::viewspace_interpolate(bar, a2v.normals);
-        v2f.textureCoord = Interpolator::viewspace_interpolate(bar, a2v.textureCoords);
+        v2f.fragCoord = interpolator.viewspace_interpolate(bar, a2v.vertexCoords);
+        v2f.normal = interpolator.viewspace_interpolate(bar, a2v.normals);
+        v2f.textureCoord = interpolator.viewspace_interpolate(bar, a2v.textureCoords);
     }
 
     // Phong shading with texture
@@ -52,6 +52,9 @@ class BumpTextureShader : public TextureShader{
         blinnPhong(payload, color);
     }
 
+    virtual shared_ptr<Shader> clone() const override {
+        return make_shared<BumpTextureShader>(*this);
+    }
 };
 
 #endif

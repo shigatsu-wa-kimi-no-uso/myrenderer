@@ -137,5 +137,41 @@
     <ClInclude Include="src\common\Buffer.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\hittable\Sphere.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\device\shader\RTShader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\device\shader\PBRShader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\device\Scene.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\material\BRDF\BRDFLambertian.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\material\BRDF\Luminary.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\material\BRDF\CookTorrance.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\hittable\BVH.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\hittable\HittableList.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\Bounds3.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\hittable\HittableContainer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
 </Project>

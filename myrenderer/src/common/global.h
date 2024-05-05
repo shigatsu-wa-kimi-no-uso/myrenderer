@@ -25,6 +25,8 @@ using std::sqrt;
 using std::make_pair;
 using std::pair;
 using std::string;
+using std::enable_if;
+using std::is_same;
 
 #include <common/Color.h>
 

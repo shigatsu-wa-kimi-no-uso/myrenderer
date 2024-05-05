@@ -34,13 +34,13 @@ public:
 	//shadow map实现硬阴影
 	virtual void shadeVertex(int nthVertex, Vec4& clip_coord) override {
 		Vec4 vertex_view_coord = uni.modelView * toVec4(attr.vertexCoord, 1);
-		Interpolator::vertex_view_coords[nthVertex] = toVec3(vertex_view_coord);
-		a2v.vertexCoords[nthVertex] = Interpolator::vertex_view_coords[nthVertex];
+		interpolator.vertex_view_coords[nthVertex] = toVec3(vertex_view_coord);
+		a2v.vertexCoords[nthVertex] = interpolator.vertex_view_coords[nthVertex];
 		clip_coord = uni.projection * vertex_view_coord;
 	}
 
 	virtual void processVarying(const Vec3& bar) override {
-		v2f.fragCoord = Interpolator::viewspace_interpolate(bar, a2v.vertexCoords);
+		v2f.fragCoord = interpolator.viewspace_interpolate(bar, a2v.vertexCoords);
 	}
 
 	virtual void shadeFragment(ColorN& color) override {
@@ -48,6 +48,10 @@ public:
 		double depth = -v2f.fragCoord.z();  // 平行光 只记录z(在光源的viewspace下)(摄像头朝向-z轴,故z永远小于0,取正值便于绘制shadow map)
 		depth /= uni.maxDistance;  //[0,maxDistance] -> [0,1]
 		color = depth*ColorN(1,1,1);
+	}
+
+	virtual shared_ptr<Shader> clone() const override {
+		return make_shared<DepthShader>(*this);
 	}
 };
 

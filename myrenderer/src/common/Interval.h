@@ -26,6 +26,13 @@ public:
         if (x > max) return max;
         return x;
     }
+
+    void clamp(Vec3& vec) const {
+        vec.x() = clamp(vec.x());
+        vec.y() = clamp(vec.y());
+        vec.z() = clamp(vec.z());
+    }
+
 };
 
 const static Interval empty(+infinity, -infinity);

@@ -112,6 +112,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <Optimization>Disabled</Optimization>
+      <OpenMPSupport>false</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -128,6 +129,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <Optimization>MaxSpeed</Optimization>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -140,6 +142,7 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\common\Bounds3.h" />
     <ClInclude Include="src\common\Buffer.h" />
     <ClInclude Include="src\common\HitRecord.h" />
     <ClInclude Include="src\common\Image.h" />
@@ -156,22 +159,32 @@
     <ClInclude Include="src\device\Rasterizer.h" />
     <ClInclude Include="src\device\RayTracer.h" />
     <ClInclude Include="src\device\Renderer.h" />
+    <ClInclude Include="src\device\Scene.h" />
     <ClInclude Include="src\device\shader\BumpTextureShader.h" />
     <ClInclude Include="src\device\shader\CheckerTextureShader.h" />
     <ClInclude Include="src\device\shader\DepthShader.h" />
     <ClInclude Include="src\device\shader\NormalShader.h" />
+    <ClInclude Include="src\device\shader\PBRShader.h" />
+    <ClInclude Include="src\device\shader\RTShader.h" />
     <ClInclude Include="src\device\shader\Shader.h" />
     <ClInclude Include="src\device\shader\TextureShader.h" />
     <ClInclude Include="src\external\OBJ_Loader.h" />
     <ClInclude Include="src\external\stb_image.h" />
     <ClInclude Include="src\figure\Figure.h" />
     <ClInclude Include="src\figure\Line.h" />
+    <ClInclude Include="src\hittable\BVH.h" />
     <ClInclude Include="src\hittable\Hittable.h" />
+    <ClInclude Include="src\hittable\HittableContainer.h" />
+    <ClInclude Include="src\hittable\HittableList.h" />
     <ClInclude Include="src\hittable\Luminary.h" />
     <ClInclude Include="src\hittable\MeshModel.h" />
+    <ClInclude Include="src\hittable\Sphere.h" />
     <ClInclude Include="src\hittable\Triangle.h" />
     <ClInclude Include="src\material\BlinnPhong.h" />
     <ClInclude Include="src\material\BlinnPhongWithBump.h" />
+    <ClInclude Include="src\material\BRDF\CookTorrance.h" />
+    <ClInclude Include="src\material\BRDF\BRDFLambertian.h" />
+    <ClInclude Include="src\material\BRDF\Luminary.h" />
     <ClInclude Include="src\material\Lambertian.h" />
     <ClInclude Include="src\material\Metal.h" />
     <ClInclude Include="src\material\Material.h" />
@@ -179,6 +192,9 @@
     <ClInclude Include="src\texture\ImageTexture.h" />
     <ClInclude Include="src\texture\SolidColorTexture.h" />
     <ClInclude Include="src\texture\Texture.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

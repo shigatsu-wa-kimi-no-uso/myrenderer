@@ -17,6 +17,8 @@ public:
 
     double maxDistance;  //光最远到达的半径长度
 
+    
+
     //shadowmap参数
     ShadowMap shadowMap;
 

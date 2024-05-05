@@ -10,13 +10,14 @@
 #include <material/BlinnPhongWithBump.h>
 #include <device/shader/BumpTextureShader.h>
 #include <texture/CheckerTexture.h>
+#include <material/BRDF/BRDFLambertian.h>
+#include <material/BRDF/Luminary.h>
 
-
-void setCamera(Camera& camera) {
-	camera.aspect_ratio = 1;
+void setCameraConfig1(Camera& camera) {
+	camera.aspectRatio = 1;
 	camera.fov = 45;
-	camera.frustum_far = -50;	//基于lookat的远近值
-	camera.frustum_near = -0.1;
+	camera.frustumFar = -50;	//基于lookat的远近值
+	camera.frustumNear = -0.1;
 	camera.lookfrom = Point3(0, 0, 5);
 	//camera.lookfrom = Point3(1, 2, 5);
 	camera.lookat = (Point3(0, -1, 0)  - camera.lookfrom).normalized();
@@ -46,8 +47,8 @@ shared_ptr<MeshModel> getParallelogram(const Vec3& u,const Vec3& v,const Point3&
 	Triangle t2 = t1;
 	t2.vertices[0] = toVec4(c,1);
 	t2.normals[2] = t1.normals[0];
-	mod->meshList.push_back(t1);
-	mod->meshList.push_back(t2);
+	mod->add(make_shared<Triangle>(t1));
+	mod->add(make_shared<Triangle>(t2));
 	return mod;
 }
 
@@ -60,7 +61,7 @@ std::unordered_map<string, shared_ptr<Texture>> textures;
 
 
 
-void registerAssets(Renderer& renderer) {
+void registerAssetsConfig1(Renderer& renderer) {
 	string texturePath = "C:/Users/Administrator/Documents/Visual Studio 2022/Projects/myrenderer/myrenderer/models/spot/spot_texture.png";
 	string bumpTexturePath = "C:/Users/Administrator/Documents/Visual Studio 2022/Projects/myrenderer/myrenderer/models/spot/hmap.jpg";
 
@@ -100,15 +101,9 @@ void addChecker(Renderer& renderer) {
 	renderer.setModelTransform(checker_id, make_shared<Mat4>(modeling2));
 }
 
-
-
-int main() {
-	
-	Renderer renderer;
-	Camera camera;
-	setCamera(camera);
+void sceneConfig1(Renderer& renderer,Camera& camera) {
+	setCameraConfig1(camera);
 	renderer.setCamera(make_shared<Camera>(camera));
-
 	Light l1;
 	l1.position = Point3(8, 3, 4);
 	l1.intensity = Vec3(150, 150, 150);
@@ -119,7 +114,7 @@ int main() {
 	l1.shadowMap.height = 1400;
 	l1.direction = (Vec3(0, -1, 0) - l1.position).normalized();
 	l1.up = getOrthoVec(l1.direction);
-	
+
 	Light l2 = l1;
 	l2.position = Point3(4, 3, 4);
 	l2.intensity = Vec3(250, 250, 250);
@@ -133,13 +128,100 @@ int main() {
 	renderer.setCanvasWidth(700);
 	renderer.setCanvasAspectRatio(1);
 
-	registerAssets(renderer);
+	registerAssetsConfig1(renderer);
 	addChecker(renderer);
 	addSpot(renderer);
 
-
-	renderer.setRenderMethod(Renderer::RASTERIZATION_WITH_SHADOW);
+	renderer.setRenderingMethod(Renderer::RASTERIZATION);
+	renderer.setRendererConfig(Renderer::WITH_SHADOW);
 	renderer.setSSAAMultiple(4);
+}
+
+void closeStdLog() {
+	std::ostringstream nullStream;
+	std::clog.rdbuf(nullStream.rdbuf());
+}
+
+
+
+void setCameraConfig2(Camera& camera) {
+	camera.aspectRatio = 1;
+	camera.defocusAngle = 0;
+	camera.fov = 40;
+	camera.focusDist = 1;
+	camera.lookfrom = Point3(278, 273, -800);
+	camera.lookat = Vec3(278, 273, 0);
+	camera.vup = getOrthoVec( camera.lookat - camera.lookfrom ).normalized();
+	if (camera.vup.y() < 0) {
+		camera.vup = -camera.vup;
+	}
+	camera.initialize();
+}
+
+void sceneConfig2(Renderer& renderer, Camera& camera) {
+	setCameraConfig2(camera);
+	renderer.setCamera(make_shared<Camera>(camera));
+	renderer.setCanvasWidth(784);
+	renderer.setCanvasAspectRatio(1);
+	/*
+	shared_ptr<MeshModel_BVH> floor;
+	shared_ptr<MeshModel_BVH> shortbox;
+	shared_ptr<MeshModel_BVH> tallbox;
+	shared_ptr<MeshModel_BVH> left;
+	shared_ptr<MeshModel_BVH> right;
+	shared_ptr<MeshModel_BVH> light;
+	shared_ptr<MeshModel_BVH> spot;
+	*/
+	shared_ptr<MeshModel> floor;
+	shared_ptr<MeshModel> shortbox;
+	shared_ptr<MeshModel> tallbox;
+	shared_ptr<MeshModel> left;
+	shared_ptr<MeshModel> right;
+	shared_ptr<MeshModel> light;
+	shared_ptr<MeshModel> spot;
+
+	OBJLoader::loadMeshModel("models/cornellbox/floor.obj", floor);
+	OBJLoader::loadMeshModel("models/cornellbox/shortbox.obj",shortbox);
+	OBJLoader::loadMeshModel("models/cornellbox/tallbox.obj", tallbox);
+	OBJLoader::loadMeshModel("models/cornellbox/left.obj",left);
+	OBJLoader::loadMeshModel("models/cornellbox/right.obj", right);
+	OBJLoader::loadMeshModel("models/cornellbox/light.obj",light);
+	OBJLoader::loadMeshModel("models/spot/spot_triangulated_good.obj", spot);
+	shared_ptr<Material> green = make_shared<BRDFLambertian>(ColorN(0.14, 0.45, 0.091));
+	shared_ptr<Material> red = make_shared<BRDFLambertian>(ColorN(0.63, 0.065, 0.05));
+	shared_ptr<Material> white = make_shared<BRDFLambertian>(ColorN(0.725, 0.71, 0.68));
+	Vec3 emit = 8.0f * Vec3(0.747 + 0.058, 0.747 + 0.258, 0.747) 
+		+ 15.6f * Vec3(0.740 + 0.287, 0.740 + 0.160, 0.740) 
+		+ 18.4f * Vec3(0.737 + 0.642, 0.737 + 0.159, 0.737);
+	shared_ptr<Material> luminary = make_shared<Luminary>(emit);
+	shared_ptr<Material> texture_spot = make_shared<BRDFLambertian>(make_shared<ImageTexture>("models/spot/spot_texture.png"));
+
+
+	floor->material = white;
+	shortbox->material = white;
+	tallbox->material = white;
+	left->material = red;
+	right->material = green;
+	light->material = luminary;
+	spot->material = texture_spot;
+	int floor_id = renderer.addMeshModel(floor);
+	int shortbox_id = renderer.addMeshModel(shortbox);
+	int tallbox_id = renderer.addMeshModel(tallbox);
+	int left_id = renderer.addMeshModel(left);
+	int right_id = renderer.addMeshModel(right);
+	int light_id = renderer.addMeshModel(light);
+	int spot_id = renderer.addMeshModel(spot);
+	renderer.setSamplesPerPixel(8);
+	renderer.setRenderingMethod(Renderer::RASTERIZATION);
+	renderer.setRendererConfig(Renderer::USE_BVH);
+}
+
+int main() {
+	//closeStdLog();
+	Renderer renderer;
+	Camera camera;
+
+	sceneConfig2(renderer, camera);
 
 	renderer.render();
 	renderer.output(std::cout);

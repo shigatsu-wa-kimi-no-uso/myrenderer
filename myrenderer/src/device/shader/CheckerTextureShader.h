@@ -12,14 +12,14 @@ class CheckerTextureShader : public Shader {
         Vec3 normal = toVec3(uni.modelViewIT * toVec4(attr.normal, 0));//变换过程中要进行法向量矫正
         a2v.normals[nthVertex] = normal;
         a2v.textureCoords[nthVertex] = attr.textureCoord;
-        Interpolator::vertex_view_coords[nthVertex] = toVec3(vertex_view_coord);
-        a2v.vertexCoords[nthVertex] = Interpolator::vertex_view_coords[nthVertex];
+        interpolator.vertex_view_coords[nthVertex] = toVec3(vertex_view_coord);
+        a2v.vertexCoords[nthVertex] = interpolator.vertex_view_coords[nthVertex];
         clip_coord = uni.projection * vertex_view_coord;
     }
 
     virtual void processVarying(const Vec3& bar) override {
-        v2f.fragCoord = Interpolator::viewspace_interpolate(bar, a2v.vertexCoords);
-        v2f.normal = Interpolator::viewspace_interpolate(bar, a2v.normals);
+        v2f.fragCoord = interpolator.viewspace_interpolate(bar, a2v.vertexCoords);
+        v2f.normal = interpolator.viewspace_interpolate(bar, a2v.normals);
     }
 
 
@@ -48,6 +48,10 @@ class CheckerTextureShader : public Shader {
         TextureShader::BlinnPhongPayload payload = { v2f.fragCoord,normal,uv,material,uni.ambientLightIntensity,uni.lights,uni.objWorld2ShadowMap,uni.objWorld2LightViewspace,uni.viewInverse,uni.withShadow };
 
         TextureShader::blinnPhong(payload, color);
+    }
+
+    virtual shared_ptr<Shader> clone() const override {
+        return make_shared<CheckerTextureShader>(*this);
     }
 
 };

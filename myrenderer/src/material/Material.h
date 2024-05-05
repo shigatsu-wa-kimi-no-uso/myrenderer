@@ -31,6 +31,25 @@ public:
         return false;
     }
 
+    virtual bool isLuminary() const {
+        return false;
+    }
+
+    virtual ColorN getEmittance(double u = 0, double v = 0) const {
+        return ColorN(0, 0, 0);
+    }
+
+    virtual Vec3 sampleScatter(const Vec3& wi, const Vec3& wo, const Vec3& normal, double& pdf) const {
+        return {};
+    }
+
+    virtual ColorN eval(const Vec3& wi, const Vec3& wo, const Vec3& normal, double u = 0, double v = 0) const {
+        return {};
+    }
+
+    virtual shared_ptr<Texture> getTexture() const {
+        return {};
+    }
 };
 
 

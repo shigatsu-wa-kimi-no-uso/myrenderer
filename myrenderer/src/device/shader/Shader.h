@@ -9,10 +9,11 @@
 #include <texture/Texture.h>
 #include <material/Material.h>
 #include <common/Buffer.h>
+#include <device/RayTracer.h>
 
 class Shader {
 public:
-	struct Uniform {
+	static struct Uniform {
 		Mat4 modelView;
 		Mat4 modelViewIT;
 		Mat4 projection;
@@ -25,6 +26,7 @@ public:
 		Vec3 ambientLightIntensity;
 		double maxDistance;
 		bool withShadow;
+		shared_ptr<RayTracer> rayTracer;
 	}uni;
 
 	struct Attribute {
@@ -35,24 +37,26 @@ public:
 	}attr;
 
 
+	virtual shared_ptr<Shader> clone() const = 0;
+
 	virtual void processVarying(const Vec3& bar) = 0;
 
 	virtual void shadeVertex(int nthVertex, Vec4& clip_coord) {
 		Vec4 vertex_view_coord = uni.modelView * toVec4(attr.vertexCoord, 1);
-		Interpolator::vertex_view_coords[nthVertex] = vertex_view_coord.head(3);
+		interpolator.vertex_view_coords[nthVertex] = vertex_view_coord.head(3);
 		a2v.vertexCoords[nthVertex] = attr.vertexCoord;
 		clip_coord = uni.projection * vertex_view_coord;
-		
 	}
 
 	virtual void shadeFragment(ColorN& color) = 0;
+
 	struct FragmentVarying {
 		Vec3 fragCoord;
 		Vec3 normal;
 		Vec2 textureCoord;
 	}v2f;
 
-
+	Interpolator interpolator;
 
 protected:
 	struct V2F_Vars {
@@ -67,5 +71,6 @@ protected:
 
 };
 
+inline Shader::Uniform Shader::uni;
 
 #endif // DEVICE_SHADER_SHADER_H

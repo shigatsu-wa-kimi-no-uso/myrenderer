@@ -11,6 +11,9 @@ public:
 	virtual ColorN value(double u, double v) const {
 		return normalizeColor(valueRGB255(u, v));
 	}
+	virtual shared_ptr<Texture> clone() const {
+		return {};
+	}
 	virtual Color255 valueRGB255(double u, double v) const {
 		return Color255(255, 255, 255);
 	}

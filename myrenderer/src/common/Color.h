@@ -14,7 +14,7 @@ inline ColorN normalizeColor(const Color255& c) {
 
 inline double linear_to_gamma(double linear_component)
 {
-    return sqrt(linear_component);
+    return pow(linear_component,0.6);
 }
 
 inline ColorN linear_to_gamma(ColorN linear_component)

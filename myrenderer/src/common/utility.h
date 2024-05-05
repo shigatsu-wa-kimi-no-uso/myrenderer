@@ -39,9 +39,9 @@ inline Vec3 random_unit_vector() {
 	return Vec3::Random().normalized();
 }
 
-inline Vec3 random_in_unit_disk() {
+inline Vec2 random_in_unit_circle() {
 	while (true) {
-		auto p = Vec3(random_double(-1.0, 1.0), random_double(-1.0, 1.0), 0);
+		Vec2 p(random_double(-1.0, 1.0), random_double(-1.0, 1.0));
 		if (p.squaredNorm() < 1)
 			return p;
 	}
@@ -212,11 +212,70 @@ inline Mat4 getViewport(int width,int height,int zFar,int zNear) {
 	return t2 * s * t;
 }
 
-Vec3 getOrthoVec(const Vec3& v) {
+inline Vec3 getOrthoVec(const Vec3& v) {
 	Vec3 xz(v[0], 0, v[2]);  //v去除y轴在xOz平面上的投影
 	Vec3 axis(-xz[2], 0, xz[0]); //与投影垂直的向量
 	return toVec3(getRotation(axis, 90) * toVec4(v, 0));
 }
 
+inline size_t viewportCoord_to_bufferOffset(int width, int height, int vx, int vy) {
+	//视口坐标 to buffer偏移,buffer按照图像坐标系,先计算canvas坐标(y从上到下递减),故需翻转y
+	//假设视口高度20像素,则坐标范围[0,19],翻转后19->0 0->19,即canvas_y = 20-1-vp_y
+	int canvas_y = (height - 1 - vy);
+	return size_t(width) * size_t(canvas_y) + size_t(vx);
+}
+
+Vec3 localToWorld(const Vec3& a, const Vec3& N) {
+	Vec3 B, C;
+	if (fabs(N.x()) > fabs(N.y())) {
+		float invLen = 1.0 / sqrt(N.x() * N.x() + N.z() * N.z());
+		C = Vec3(N.z() * invLen, 0.0f, -N.x() * invLen);
+	} else {
+		float invLen = 1.0 / std::sqrt(N.y() * N.y() + N.z() * N.z());
+		C = Vec3(0.0, N.z() * invLen, -N.y() * invLen);
+	}
+	B = C.cross(N);
+	return a.x() * B + a.y() * C + a.z() * N;
+}
+
+template<typename T>
+inline T lerp(const T& b, const T& e, const float& t)
+{
+	return b * (1 - t) + e * t;
+}
+
+
+template<typename T,typename = typename enable_if<is_same<T,Vec3>::value || is_same<T, Point3>::value>::type>
+inline T getMin(const T& a, const  T& b) {
+	double x = std::min(a.x(), b.x());
+	double y = std::min(a.y(), b.y());
+	double z = std::min(a.z(), b.z());
+	return T(x, y, z);
+}
+
+template<typename T, typename = typename enable_if<is_same<T, Vec3>::value || is_same<T, Point3>::value>::type>
+inline T getMin(const T& a, const  T& b,const T& c) {
+	double x = std::min({ a.x(), b.x() ,c.x()});
+	double y = std::min({ a.y(), b.y(),c.y() });
+	double z = std::min({ a.z(), b.z(),c.z() });
+	return T(x, y, z);
+}
+
+
+template<typename T, typename = typename enable_if<is_same<T, Vec3>::value || is_same<T, Point3>::value>::type>
+inline T getMax(const T& a, const  T& b) {
+	double x = std::max(a.x(), b.x());
+	double y = std::max(a.y(), b.y());
+	double z = std::max(a.z(), b.z());
+	return T(x, y, z);
+}
+
+template<typename T, typename = typename enable_if<is_same<T, Vec3>::value || is_same<T, Point3>::value>::type>
+inline T getMax(const T& a, const  T& b, const T& c) {
+	double x = std::max({ a.x(), b.x(),c.x() });
+	double y = std::max({ a.y(), b.y() ,c.y() });
+	double z = std::max({ a.z(), b.z() ,c.z() });
+	return T(x, y, z);
+}
 
 #endif // COMMON_UTILITY_H

@@ -31,7 +31,7 @@ protected:
 public:
 
     Canvas() :_mode(0),_width(0),_height(0){
-        applyConfigs();
+        applyConfig();
     }
 
     virtual ~Canvas() = default;
@@ -57,7 +57,7 @@ public:
         _mode = m;
     }
 
-    virtual void applyConfigs() {
+    virtual void applyConfig() {
         _draw_method = (_mode & COLOR_OVERLAY) ? &Canvas::_setPixelColor : &Canvas::_blendPixelColor;
     }
 
@@ -91,6 +91,7 @@ public:
         using namespace std;
         out.flush();
         out << "P3\n" << _width << ' ' << _height << "\n255\n";
+
         for (int i = 0; i < _width * _height; i++) {
             const ColorN& pixel_color = _frameBuffer[i];
 
@@ -98,8 +99,8 @@ public:
 
             // Apply the linear to gamma transform.
             //gamma½ÃÕý
-          //  ColorN corrected = linear_to_gamma(pixel_color);
-            Color255 outputColor = normal_to_RGB255(pixel_color);
+            ColorN corrected = linear_to_gamma(pixel_color);
+            Color255 outputColor = normal_to_RGB255(corrected);
             /*
             if (outputColor != Color255(0, 0, 0)) {
                 std::cout << "(" << i/_width << "," << i%_width << ")" << "\n";

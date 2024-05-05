@@ -5,6 +5,7 @@
 #include <device/shader/Shader.h>
 #include <device/Canvas.h>
 #include <common/Buffer.h>
+#include <omp.h>
 
 class Rasterizer {
 private:
@@ -95,23 +96,25 @@ private:
 
 
     void rasterize(const Point2& subpixelPos, const Vec4(&screenCoords)[3], const shared_ptr<Shader>& shader,const Point2i& pixelPos, int subunitIdx) {
-        ColorN fragColor(0, 0, 0);
-        ZBuffer& zBuffer = *_zBufferUsing;
-        FrameBuffer& frameBuffer = *_frameBufferUsing;
         if (_insideTriangle(subpixelPos, screenCoords)) {
-            // If so, use the following code to get the interpolated z value.
-            Vec3 bar = Interpolator::computeBarycentric2D(subpixelPos, screenCoords);
+            ZBuffer& zBuffer = *_zBufferUsing;
+            FrameBuffer& frameBuffer = *_frameBufferUsing;
+            Vec3 bar = shader->interpolator.computeBarycentric2D(subpixelPos, screenCoords);
             shader->processVarying(bar);
             //深度测试
             //z值以screen space为准, 不需要以view space为准
-            double sub_z_interpolated = Interpolator::screenspace_interpolate(bar, { screenCoords[0].z(), screenCoords[1].z(), screenCoords[2].z() });
+            double sub_z_interpolated = shader->interpolator.screenspace_interpolate(bar, { screenCoords[0].z(), screenCoords[1].z(), screenCoords[2].z() });
             // 注意:z值与远近的关系需由projection和viewport变换共同决定,viewport变换后,z值越小越远,经过反转为depth值,越大越远, depth_buf初始值为无穷大
             double depth = -sub_z_interpolated; // 越小越深 -> 越大越深
             //zbuffer一定是二维的,如果不用SSAA,则设第二维的长度为1
-            if (zBuffer[pixelPos[1]][pixelPos[0]][subunitIdx] > depth) {
-                zBuffer[pixelPos[1]][pixelPos[0]][subunitIdx] = depth;
-                shader->shadeFragment(fragColor);
-                frameBuffer[pixelPos[1]][pixelPos[0]][subunitIdx] = fragColor; //仅当此种情况才会设置颜色,其余情况保持buffer不变
+            //#pragma omp critical
+            {
+                if (zBuffer[pixelPos[1]][pixelPos[0]][subunitIdx] > depth) {
+                    zBuffer[pixelPos[1]][pixelPos[0]][subunitIdx] = depth;
+                    ColorN fragColor(0, 0, 0);
+                    shader->shadeFragment(fragColor);
+                    frameBuffer[pixelPos[1]][pixelPos[0]][subunitIdx] = fragColor; //仅当此种情况才会设置颜色,其余情况保持buffer不变
+                }
             }
         }
     }
@@ -166,6 +169,7 @@ public:
     //Screen space rasterization
     void rasterize_triangle(const Vec4(&screenCoords)[3], const shared_ptr<Shader>& shader){
         BoundingBox bbox = _getBoundingBox(screenCoords);
+    #pragma omp parallel for
         for (int x = bbox.lft; x <= bbox.rgt; x++) {
             for (int y = bbox.btn; y <= bbox.top; y++) {
                 rasterize_ssaa(Point2i(x, y), screenCoords, shader);
@@ -178,6 +182,7 @@ public:
         assert(_ssaa_multiple > 0);
         assert(_width > 0 && _height > 0);
         const FrameBuffer& buffer = *_frameBufferUsing;
+    #pragma omp parallel for
         for (int y = 0; y < _height; y++) {
             for (int x = 0; x < _width; x++) {
                 BufUnit pixel = buffer[y][x];

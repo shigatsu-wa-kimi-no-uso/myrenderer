@@ -10,8 +10,9 @@ struct HitRecord
     Point3 point;
     Vec3 normal;
     shared_ptr<Material> material;
-    double t;
-    bool front_face;
+    double t = infinity;
+    bool frontFace;
+    bool hitAnything = false;
 };
 
 #endif
